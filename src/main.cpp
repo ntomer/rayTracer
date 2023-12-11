@@ -1,26 +1,16 @@
-#include <iostream>
+#include "rtweekend.hpp"
+
 #include "color.hpp"
-#include "vec3.hpp"
-#include "ray.hpp"
+#include "hittable.hpp"
+#include "hittable_list.hpp"
+#include "sphere.hpp"
 
-double hit_sphere(const point3& center, double radius, const ray& r){
-    vec3 oc = r.origin() - center;
-    auto a = r.direction().length_squared();
-    auto half_b = dot(oc, r.direction());
-    auto c = oc.length_squared() - radius*radius;
-    auto distriminant = half_b*half_b - a*c;
+#include <iostream>
 
-    if (distriminant < 0)
-        return -1;
-    else
-        return (-half_b - sqrt(distriminant) ) / a;
-}
-
-color ray_color(const ray& r){
-    auto t = hit_sphere(point3(0,0,-1), 0.5, r);
-    if (t>0.0){
-        vec3 N = unit_vector(r.at(t) - vec3(0,0,-1));
-        return 0.5*color(N.x()+1, N.y()+1, N.z()+1);
+color ray_color(const ray& r, const hittable& world){
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)){
+        return 0.5*(rec.normal + color(1,1,1));
     }
 
     vec3 unit_dir = unit_vector(r.direction());
@@ -32,11 +22,16 @@ int main(){
 
     //image
     auto aspect_ratio_ideal = 16.0/9.0;
-    int im_width = 200;
+    int im_width = 400;
     
     //calculate the image height and ensure that it's at least 1.
     int im_height = static_cast<int>(im_width / aspect_ratio_ideal);
     im_height = (im_height<1)?1:im_height;
+
+    //world
+    hittable_list world;
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,-100.5, -1),100));
 
     //camera
     auto focal_length = 1.0;
@@ -67,7 +62,7 @@ int main(){
             auto ray_direction = pixel_center - camera_center;
             ray r(camera_center, ray_direction);
 
-            color pixel_color = ray_color(r);
+            color pixel_color = ray_color(r, world);
             write_color(std::cout, pixel_color);
         }
     }
